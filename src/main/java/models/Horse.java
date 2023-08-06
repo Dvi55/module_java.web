@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class Horse {
-    private static int finishCounter = 0;
+    private int finishCounter = 1;
 
     private int id;
     private int raceDistance;
@@ -44,7 +44,7 @@ public class Horse {
                 Thread.sleep(sleepTime);
             }
             synchronized (Horse.class) {
-                place = ++finishCounter;
+                place = finishCounter++;
             }
             isRunning = false;
         } catch (InterruptedException e) {

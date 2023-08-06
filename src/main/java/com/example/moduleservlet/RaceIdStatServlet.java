@@ -35,7 +35,7 @@ public class RaceIdStatServlet extends HttpServlet {
             PrintWriter out = res.getWriter();
             out.println("<html><body>");
             out.println("<h3>Race details</h3>");
-            String raceId = req.getPathInfo(); // Отримати "/1" з URL "/race/1"
+            String raceId = req.getPathInfo();
             raceId = raceId.substring(5);
 
             raceIdInt = Integer.parseInt(raceId);

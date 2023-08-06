@@ -67,8 +67,15 @@ public class StartRaceServlet extends HttpServlet {
         for (Horse horse : horses) {
             horse.startRace();
         }
+        for (Horse horse : horses) {
+            try {
+                horse.getRaceThread().join();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
-        String insertRaceSql = "INSERT INTO races (date, total_horses, user_horse_id) VALUES (?, ?, ?, ?)";
+        String insertRaceSql = "INSERT INTO races (date, total_horses, user_horse_id) VALUES (?, ?, ?)";
         String getLastInsertedIdSql = "SELECT LAST_INSERT_ID() as last_id";
         try {
             PreparedStatement insertRaceStatement = conn.prepareStatement(insertRaceSql);
@@ -87,6 +94,20 @@ public class StartRaceServlet extends HttpServlet {
             lastIdStatement.close();
 
             for (Horse horse : horses) {
+
+                int horseId = horse.getId();
+
+                String sql = "INSERT INTO horses (id, race_id, position) VALUES (?, ?, ?)";
+
+                PreparedStatement ps = conn.prepareStatement(sql);
+
+                ps.setInt(1, horseId);
+                ps.setInt(2, lastInsertedRaceId);
+                ps.setInt(3, horse.getPlace());
+
+                ps.executeUpdate();
+            }
+            for (Horse horse : horses) {
                 String insertHorseSql = "INSERT INTO horses (race_id, position) VALUES (?, ?)";
                 PreparedStatement insertHorseStatement = conn.prepareStatement(insertHorseSql);
                 insertHorseStatement.setInt(1, lastInsertedRaceId);
@@ -95,12 +116,27 @@ public class StartRaceServlet extends HttpServlet {
                 insertHorseStatement.close();
             }
 
-            response.sendRedirect(request.getContextPath() + "/race-results");
+            String sql = "INSERT INTO horses (id, race_id, position) VALUES (?, ?, ?)";
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+            Horse userHorsePlace = null;
+
+            for (Horse horse : horses) {
+                if (horse.getId() == userHorse) {
+                    userHorsePlace = horse;
+                    break;
+                }
+            }
+
+            ps.setInt(1, userHorse);
+            ps.setInt(2, lastInsertedRaceId);
+            ps.setInt(3, userHorsePlace.getPlace());
+
+            ps.executeUpdate();
+
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-
-
-        response.sendRedirect(request.getContextPath() + "/race/" + lastInsertedRaceId);
+        response.sendRedirect(request.getContextPath() + "/race/race" + lastInsertedRaceId);
     }
 }

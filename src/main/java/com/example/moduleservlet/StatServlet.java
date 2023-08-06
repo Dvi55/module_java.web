@@ -34,9 +34,13 @@ public class StatServlet extends HttpServlet {
             out.println("<html><body>");
             out.println("<h3>Race details</h3>");
             Statement stmt = conn.createStatement();
-            String sql = "SELECT r.id, r.total_horses " +
-            "FROM races r " +
-            "LEFT JOIN horses h ON r.user_horse_id = h.id;";
+            String sql = "SELECT\n" +
+                    "  r.id, \n" +
+                    "  r.total_horses,\n" +
+                    "  h.position AS user_horse_position\n" +
+                    "FROM races r\n" +
+                    "LEFT JOIN horses h \n" +
+                    "  ON r.user_horse_id = h.id AND h.id = r.user_horse_id;";
 
             ResultSet resultSet = stmt.executeQuery(sql);
             out.println("<table border=1><tr>" + "<td><b>Race Id</b></td>" + "<td><b>User horse place</b></td>"

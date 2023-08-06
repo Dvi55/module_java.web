@@ -69,16 +69,13 @@ htmlContent.append("</select>"
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        // Отримання вибору гонки з форми
         String selectedRace = request.getParameter("selected_race");
 
-        // Перенаправлення на інший сервлет та передача параметру
         response.sendRedirect(request.getContextPath() + "/race/" + selectedRace);
     }
 
     public void destroy() {
 
-        // Close connection object.
         try {
             conn.close();
         } catch (SQLException e) {
