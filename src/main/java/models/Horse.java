@@ -4,8 +4,11 @@ import lombok.Data;
 
 @Data
 public class Horse {
+    private static int finishCounter = 0;
+
     private int id;
     private int raceDistance;
+    private int place;
     private int currentPosition;
     private boolean isRunning;
     private Thread raceThread;
@@ -15,6 +18,7 @@ public class Horse {
         this.raceDistance = 1000;
         this.currentPosition = 0;
         this.isRunning = false;
+        this.place = 0;
     }
 
     public void startRace() {
@@ -39,7 +43,9 @@ public class Horse {
                 int sleepTime = (int) (Math.random() * 100) + 400;
                 Thread.sleep(sleepTime);
             }
-
+            synchronized (Horse.class) {
+                place = ++finishCounter;
+            }
             isRunning = false;
         } catch (InterruptedException e) {
             e.printStackTrace();
