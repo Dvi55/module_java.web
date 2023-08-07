@@ -43,7 +43,7 @@ public class Horse {
                 int sleepTime = (int) (Math.random() * 100) + 400;
                 Thread.sleep(sleepTime);
             }
-            synchronized (Horse.class) {
+            synchronized(this) {
                 place = finishCounter++;
             }
             isRunning = false;

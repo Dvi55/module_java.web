@@ -32,16 +32,16 @@ public class RaceIdSelectServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html");
-try {
-    Statement stmt = conn.createStatement();
-    String sql = "SELECT COUNT(*) AS total_races FROM races";
-    ResultSet resultSet = stmt.executeQuery(sql);
-    if (resultSet.next()) {
-        totalNumberOfRaces = resultSet.getInt("total_races");
-    }
-} catch (SQLException e) {
-    throw new RuntimeException(e);
-}
+        try {
+            Statement stmt = conn.createStatement();
+            String sql = "SELECT COUNT(*) AS total_races FROM races";
+            ResultSet resultSet = stmt.executeQuery(sql);
+            if (resultSet.next()) {
+                totalNumberOfRaces = resultSet.getInt("total_races");
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
         StringBuilder htmlContent = new StringBuilder("<!DOCTYPE html>"
                 + "<html>"
                 + "<head>"
@@ -53,11 +53,11 @@ try {
                 + "<label for=\"race-select\">Chose race:</label>"
                 + "<select id=\"race-select\" name=\"selected_race\">");
 
-for (int i = 1; i < totalNumberOfRaces + 1; i++) {
-  htmlContent.append("<option value=\"race").append(i).append("\">Race ").append(i).append("</option>");
+        for (int i = 1; i < totalNumberOfRaces + 1; i++) {
+            htmlContent.append("<option value=\"race").append(i).append("\">Race ").append(i).append("</option>");
 
-}
-htmlContent.append("</select>"
+        }
+        htmlContent.append("</select>"
                 + "<br>"
                 + "<button type=\"submit\">Submit</button>"
                 + "</form>"

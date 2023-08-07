@@ -21,6 +21,7 @@ public class StartRaceServlet extends HttpServlet {
     private static final String PASSWORD = "123";
     private static final String DRIVER_CLASS = "org.mariadb.jdbc.Driver";
     private List<Horse> horses = new ArrayList<>();
+    private int lastInsertedRaceId;
 
     Connection conn;
 
@@ -55,7 +56,7 @@ public class StartRaceServlet extends HttpServlet {
             throws ServletException, IOException {
         int numHorses = Integer.parseInt(request.getParameter("numHorses"));
         int userHorse = Integer.parseInt(request.getParameter("userHorse"));
-        int lastInsertedRaceId = -1;
+        lastInsertedRaceId = -1;
         horses.clear();
 
         for (int i = 1; i <= numHorses; i++) {
@@ -67,6 +68,7 @@ public class StartRaceServlet extends HttpServlet {
         for (Horse horse : horses) {
             horse.startRace();
         }
+
         for (Horse horse : horses) {
             try {
                 horse.getRaceThread().join();
@@ -96,31 +98,25 @@ public class StartRaceServlet extends HttpServlet {
             for (Horse horse : horses) {
 
                 int horseId = horse.getId();
-
+                int uniqueHorseId = lastInsertedRaceId * 100 + horseId;
                 String sql = "INSERT INTO horses (id, race_id, position) VALUES (?, ?, ?)";
+
 
                 PreparedStatement ps = conn.prepareStatement(sql);
 
-                ps.setInt(1, horseId);
+                ps.setInt(1, uniqueHorseId);
                 ps.setInt(2, lastInsertedRaceId);
                 ps.setInt(3, horse.getPlace());
 
                 ps.executeUpdate();
             }
-            for (Horse horse : horses) {
-                String insertHorseSql = "INSERT INTO horses (race_id, position) VALUES (?, ?)";
-                PreparedStatement insertHorseStatement = conn.prepareStatement(insertHorseSql);
-                insertHorseStatement.setInt(1, lastInsertedRaceId);
-                insertHorseStatement.setInt(2, horse.getPlace());
-                insertHorseStatement.executeUpdate();
-                insertHorseStatement.close();
-            }
+
 
             String sql = "INSERT INTO horses (id, race_id, position) VALUES (?, ?, ?)";
 
             PreparedStatement ps = conn.prepareStatement(sql);
             Horse userHorsePlace = null;
-
+            int uniqueUserHorseId = lastInsertedRaceId * 100 + userHorse;
             for (Horse horse : horses) {
                 if (horse.getId() == userHorse) {
                     userHorsePlace = horse;
@@ -128,7 +124,7 @@ public class StartRaceServlet extends HttpServlet {
                 }
             }
 
-            ps.setInt(1, userHorse);
+            ps.setInt(1, uniqueUserHorseId);
             ps.setInt(2, lastInsertedRaceId);
             ps.setInt(3, userHorsePlace.getPlace());
 
