@@ -1,5 +1,6 @@
 package com.example.moduleservlet;
 
+import database.DataBaseUtil;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -7,38 +8,31 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 
 @WebServlet("/race/*")
 public class RaceIdStatServlet extends HttpServlet {
-    private static final long serialVersionUID = 2L;
-    private static final String JDBC_URL = "jdbc:mariadb://localhost:3306/race";
-    private static final String USERNAME = "root";
-    private static final String PASSWORD = "123";
-    private static final String DRIVER_CLASS = "org.mariadb.jdbc.Driver";
     Connection conn;
     int raceIdInt;
 
     public void init() {
-        try {
-            Class.forName(DRIVER_CLASS);
-            conn = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-        } catch (SQLException | ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        conn = DataBaseUtil.getConnection();
     }
 
-    public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
+    public void doGet(HttpServletRequest req, HttpServletResponse res) {
         try {
             res.setContentType("text/html");
             PrintWriter out = res.getWriter();
             out.println("<html><body>");
             out.println("<h3>Race details</h3>");
-            String raceId = req.getPathInfo();
-            raceId = raceId.substring(5);
 
+            String raceId = req.getPathInfo().substring(5);
             raceIdInt = Integer.parseInt(raceId);
+
             String sql = "SELECT r.date AS race_date, r.total_horses, h.position AS user_horse_position, r.user_horse_id " +
                     "FROM races r " +
                     "INNER JOIN horses h ON r.id = h.race_id AND h.id = r.user_horse_id " +
@@ -46,30 +40,49 @@ public class RaceIdStatServlet extends HttpServlet {
             PreparedStatement preparedStatement = conn.prepareStatement(sql);
             preparedStatement.setInt(1, raceIdInt);
             ResultSet resultSet = preparedStatement.executeQuery();
-            out.println("<table border=1><tr>" + "<td><b>Race date</b></td>" + "<td><b>Total horses</b></td>"
-                    + "<td><b>User horse position</b></td>" + "<td><b>User horse number</b></td></tr>");
-            while (resultSet.next()) {
-                LocalDate date = resultSet.getDate("race_date").toLocalDate();
-                int totalHorse = resultSet.getInt("total_horses");
-                int userHorsePosition = resultSet.getInt("user_horse_position");
-                int userHorseId = resultSet.getInt("user_horse_id");
-                out.println("<tr>" + "<td>" + date + "</td>" + "<td>" + totalHorse + "</td>" + "<td>" + userHorsePosition + "</td>" + "<td>" + userHorseId
-                        + "</td></tr>");
-            }
-            out.println("</table></body></html>");
 
+            out.println(getTable(resultSet));
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public void destroy() {
-
-        // Close connection object.
         try {
             conn.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    private int getHorseId(int raceId, int userHorseId) {
+        String stringRaceId = String.valueOf(raceId);
+        String stringUserHorseId = String.valueOf(userHorseId);
+        int commonPrefixLength = 0;
+        while (commonPrefixLength < stringRaceId.length() && commonPrefixLength < stringUserHorseId.length() &&
+                stringRaceId.charAt(commonPrefixLength) == stringUserHorseId.charAt(commonPrefixLength)) {
+            commonPrefixLength++;
+        }
+
+        if (commonPrefixLength > 0) {
+            stringUserHorseId = stringUserHorseId.substring(commonPrefixLength);
+        }
+        return Integer.parseInt(stringUserHorseId);
+    }
+
+    private String getTable(ResultSet resultSet) throws SQLException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<table border=1><tr>").append("<td><b>Race date</b></td>").append("<td><b>Total horses</b></td>")
+                .append("<td><b>User horse position</b></td>").append("<td><b>User horse number</b></td></tr>");
+        while (resultSet.next()) {
+            LocalDate date = resultSet.getDate("race_date").toLocalDate();
+            int totalHorse = resultSet.getInt("total_horses");
+            int userHorsePosition = resultSet.getInt("user_horse_position");
+            int userHorseId = getHorseId(raceIdInt, resultSet.getInt("user_horse_id"));
+            sb.append("<tr>" + "<td>").append(date).append("</td>").append("<td>").append(totalHorse).append("</td>")
+                    .append("<td>").append(userHorsePosition).append("</td>").append("<td>").append(userHorseId).append("</td></tr>");
+        }
+        sb.append("</table></body></html>");
+        return sb.toString();
     }
 }

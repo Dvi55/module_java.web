@@ -27,13 +27,4 @@ public class Race {
         }
     }
 
-    public boolean isRaceCompleted() {
-        for (Horse horse : horses) {
-            if (horse.isRunning()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
 }

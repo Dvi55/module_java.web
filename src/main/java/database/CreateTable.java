@@ -1,37 +1,30 @@
 package database;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 public class CreateTable {
-    private static final String JDBC_URL = "jdbc:mariadb://localhost:3306/race";
-    private static final String USERNAME = "root";
-    private static final String PASSWORD = "123";
-    private static final String DRIVER_CLASS = "org.mariadb.jdbc.Driver";
+    private static Connection connection = DataBaseUtil.getConnection();
 
     public static void createHorseTable() throws SQLException {
         try {
-            Class.forName(DRIVER_CLASS);
-            Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
+
             Statement statement = connection.createStatement();
             String sql = "CREATE TABLE IF NOT EXISTS horses (" +
-                    "id INT PRIMARY KEY, " +
+                    "id BIGINT PRIMARY KEY, " +
                     "race_id INT NOT NULL," +
                     "position INT NOT NULL," +
                     "FOREIGN KEY (race_id) REFERENCES races(id)" +
                     ");";
             statement.executeUpdate(sql);
-        } catch (SQLException | ClassNotFoundException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     public static void createRaceTable() throws SQLException {
         try {
-            Class.forName(DRIVER_CLASS);
-            Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
             Statement statement = connection.createStatement();
             String sql = "CREATE TABLE IF NOT EXISTS races " +
                     "(id INT PRIMARY KEY NOT NULL AUTO_INCREMENT, " +
@@ -39,13 +32,13 @@ public class CreateTable {
                     "total_horses INT NOT NULL, " +
                     "user_horse_id INT NOT NULL)";
             statement.executeUpdate(sql);
-        } catch (SQLException | ClassNotFoundException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     public static void main(String[] args) throws SQLException {
-        createHorseTable();
         createRaceTable();
+        createHorseTable();
     }
 }

@@ -1,36 +1,30 @@
 package com.example.moduleservlet;
 
-import jakarta.servlet.ServletException;
+import database.DataBaseUtil;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 @WebServlet("/race")
 public class RaceIdSelectServlet extends HttpServlet {
 
-    private static final long serialVersionUID = 3L;
-    private static final String JDBC_URL = "jdbc:mariadb://localhost:3306/race";
-    private static final String USERNAME = "root";
-    private static final String PASSWORD = "123";
-    private static final String DRIVER_CLASS = "org.mariadb.jdbc.Driver";
+
     Connection conn;
     int totalNumberOfRaces;
 
     public void init() {
-        try {
-            Class.forName(DRIVER_CLASS);
-            conn = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-        } catch (SQLException | ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        conn = DataBaseUtil.getConnection();
     }
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+            throws IOException {
         response.setContentType("text/html");
         try {
             Statement stmt = conn.createStatement();
@@ -68,7 +62,7 @@ public class RaceIdSelectServlet extends HttpServlet {
     }
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+            throws IOException {
         String selectedRace = request.getParameter("selected_race");
 
         response.sendRedirect(request.getContextPath() + "/race/" + selectedRace);

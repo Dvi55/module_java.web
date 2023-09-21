@@ -1,6 +1,6 @@
 package com.example.moduleservlet;
 
-import jakarta.servlet.ServletException;
+import database.DataBaseUtil;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,28 +15,19 @@ import java.util.List;
 
 @WebServlet("/race/start")
 public class StartRaceServlet extends HttpServlet {
-    private static final long serialVersionUID = 1L;
-    private static final String JDBC_URL = "jdbc:mariadb://localhost:3306/race";
-    private static final String USERNAME = "root";
-    private static final String PASSWORD = "123";
-    private static final String DRIVER_CLASS = "org.mariadb.jdbc.Driver";
+    private static List<Thread> horseThreads = new ArrayList<>();
     private List<Horse> horses = new ArrayList<>();
-    private int lastInsertedRaceId;
+    private static int lastInsertedRaceId;
 
     Connection conn;
 
     public void init() {
-        try {
-            Class.forName(DRIVER_CLASS);
-            conn = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-        } catch (SQLException | ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        conn = DataBaseUtil.getConnection();
     }
 
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+            throws IOException {
         response.setContentType("text/html");
         PrintWriter out = response.getWriter();
 
@@ -53,86 +44,80 @@ public class StartRaceServlet extends HttpServlet {
     }
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+            throws IOException {
+        horses.clear();
+        horseThreads.clear();
         int numHorses = Integer.parseInt(request.getParameter("numHorses"));
         int userHorse = Integer.parseInt(request.getParameter("userHorse"));
-        lastInsertedRaceId = -1;
-        horses.clear();
-
-        for (int i = 1; i <= numHorses; i++) {
-            Horse horse = new Horse(i);
-
-            horses.add(horse);
-        }
-
-        for (Horse horse : horses) {
-            horse.startRace();
-        }
-
-        for (Horse horse : horses) {
-            try {
-                horse.getRaceThread().join();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        startRace(numHorses);
 
         String insertRaceSql = "INSERT INTO races (date, total_horses, user_horse_id) VALUES (?, ?, ?)";
-        String getLastInsertedIdSql = "SELECT LAST_INSERT_ID() as last_id";
+        lastInsertedRaceId = 0;
         try {
-            PreparedStatement insertRaceStatement = conn.prepareStatement(insertRaceSql);
+            PreparedStatement insertRaceStatement = conn.prepareStatement(insertRaceSql, Statement.RETURN_GENERATED_KEYS);
             insertRaceStatement.setDate(1, java.sql.Date.valueOf(java.time.LocalDate.now()));
             insertRaceStatement.setInt(2, numHorses);
             insertRaceStatement.setInt(3, userHorse);
             insertRaceStatement.executeUpdate();
+            ResultSet rs = insertRaceStatement.getGeneratedKeys();
+            if (rs.next()) {
+                lastInsertedRaceId = rs.getInt(1);
+            }
+            rs.close();
             insertRaceStatement.close();
 
-
-            Statement lastIdStatement = conn.createStatement();
-            ResultSet resultSet = lastIdStatement.executeQuery(getLastInsertedIdSql);
-            if (resultSet.next()) {
-                lastInsertedRaceId = resultSet.getInt("last_id");
+            String updateRaceSql = "UPDATE races SET user_horse_id = ? WHERE id = ?";
+            userHorse = Integer.parseInt(lastInsertedRaceId + "" + userHorse);
+            try {
+                PreparedStatement updateRaceStatement = conn.prepareStatement(updateRaceSql);
+                updateRaceStatement.setInt(1, userHorse);
+                updateRaceStatement.setInt(2, lastInsertedRaceId);
+                int rowsUpdated = updateRaceStatement.executeUpdate();
+                if (rowsUpdated > 0) {
+                    System.out.println("Останній запис у таблиці races оновлено успішно.");
+                } else {
+                    System.out.println("Не вдалося оновити останній запис у таблиці races.");
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
-            lastIdStatement.close();
 
+            String sql = "INSERT INTO horses (id, race_id, position) VALUES (?, ?, ?)";
+            PreparedStatement ps = conn.prepareStatement(sql);
             for (Horse horse : horses) {
 
-                int horseId = horse.getId();
-                int uniqueHorseId = lastInsertedRaceId * 100 + horseId;
-                String sql = "INSERT INTO horses (id, race_id, position) VALUES (?, ?, ?)";
-
-
-                PreparedStatement ps = conn.prepareStatement(sql);
-
+                int uniqueHorseId = Integer.parseInt(lastInsertedRaceId + "" + horse.getId());
                 ps.setInt(1, uniqueHorseId);
                 ps.setInt(2, lastInsertedRaceId);
                 ps.setInt(3, horse.getPlace());
 
-                ps.executeUpdate();
+                ps.addBatch();
             }
+            ps.executeBatch();
+            ps.close();
 
 
-            String sql = "INSERT INTO horses (id, race_id, position) VALUES (?, ?, ?)";
-
-            PreparedStatement ps = conn.prepareStatement(sql);
-            Horse userHorsePlace = null;
-            int uniqueUserHorseId = lastInsertedRaceId * 100 + userHorse;
-            for (Horse horse : horses) {
-                if (horse.getId() == userHorse) {
-                    userHorsePlace = horse;
-                    break;
-                }
-            }
-
-            ps.setInt(1, uniqueUserHorseId);
-            ps.setInt(2, lastInsertedRaceId);
-            ps.setInt(3, userHorsePlace.getPlace());
-
-            ps.executeUpdate();
-
+            response.sendRedirect(request.getContextPath() + "/race/race" + lastInsertedRaceId);
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
-        response.sendRedirect(request.getContextPath() + "/race/race" + lastInsertedRaceId);
+    }
+
+    private void startRace(int numHorses) {
+        for (int i = 1; i <= numHorses; i++) {
+            Horse horse = new Horse("Horse " + (i));
+            horses.add(horse);
+            Thread thread = new Thread(horse);
+            horseThreads.add(thread);
+            thread.start();
+        }
+
+        try {
+            for (Thread thread : horseThreads) {
+                thread.join();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

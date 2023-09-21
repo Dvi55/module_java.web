@@ -4,7 +4,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>JSP - Hello</title>
+    <title>Hippodrome</title>
 </head>
 <body>
 <h1><%= "Hello in hippodrome!" %>
